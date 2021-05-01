@@ -1,3 +1,5 @@
+// User Authentication
+
 const auth = firebase.auth();
 
 const whenSignedIn = document.getElementById('whenSignedIn');
@@ -9,6 +11,8 @@ const signOutBtn = document.getElementById('signOutBtn');
 const userDetails = document.getElementById('userDetails');
 
 const provider = new firebase.auth.GoogleAuthProvider();
+
+// Sign in event handlers
 
 signInBtn.onclick = () => auth.signInWithPopup(provider);
 signOutBtn.onclick = () => auth.signOut();
@@ -28,3 +32,48 @@ auth.onAuthStateChanged(user => {
     }
 });
 
+
+// Firestore
+
+const db = firebase.firestore(); // Firesotre sdk
+
+const createThing = document.getElementById('createThing');
+const thingsList = document.getElementById('thingsList');
+
+let thingsRef; // Reference to a database location. Reference is starting point to Create Read Update Delete data
+let unsubscribe; // Turn of realtime stream - To prevent memory leaks
+
+auth.onAuthStateChanged(user =>
+{
+    if (user)
+    {
+        thingsRef = db.collection('things');
+        
+        createThing.onclick = () => {
+            const { serverTimestamp } = firebase.firestore.FieldValue;
+
+            thingsRef.add(
+            {
+                uid: user.uid,
+                name: faker.commerce.productName(),
+                createdAt: serverTimestamp()
+            });
+        }
+
+        unsubscribe = thingsRef
+            .where('uid', '==', user.uid)
+            .onSnapshot(querySnapshot => {
+                // Runs when data changes
+
+                const items= querySnapshot.docs.map(doc => {
+                    return `<li> ${doc.data().name } </li>`
+                })
+
+                thingsList.innerHTML = items.join('');
+            })
+    }
+    else
+    {
+        
+    }
+})
